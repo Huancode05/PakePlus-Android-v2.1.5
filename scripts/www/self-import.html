@@ -196,15 +196,21 @@ button.secondary{background:#64748b}
     <div class="menu">
       <button class="menu-btn" onclick="toggleMenu(event)">⋮</button>
       <div class="menu-list" id="menuList">
-        <a href="index.html">🏠 返回首页</a>
-        <button onclick="togglePreview()">👀 全局预览</button>
-        <button onclick="exportReview()">💾 导出复习包</button>
-        <button onclick="importReview()">📥 导入复习包</button>
-        <label><input type="checkbox" id="autoNext" checked> 答对自动下一题</label>
-        <label><input type="checkbox" id="darkMode"> 夜间模式</label>
-        <button onclick="toggleLoader()">📁 题库导入</button>
-        <button onclick="toggleWrong()">❌ 错题模式</button>
-      </div>
+  <a href="index.html">🏠 返回首页</a>
+  <button onclick="togglePreview()">👀 全局预览</button>
+  <button onclick="exportReview()">💾 导出复习包</button>
+  <button onclick="importReview()">📥 导入复习包</button>
+  <label><input type="checkbox" id="autoNext" checked> 答对自动下一题</label>
+  <label><input type="checkbox" id="darkMode"> 夜间模式</label>
+  <button onclick="toggleLoader()">📁 题库导入</button>
+  <button onclick="toggleWrong()">❌ 错题模式</button>
+  
+ <!-- 新增跳转功能 -->
+<div style="margin-top:6px; display:flex; gap:6px; align-items:center;">
+  <input type="number" id="jumpInputMenu" min="1" placeholder="题号" style="width:60px; padding:2px;"/>
+  <button onclick="jumpToMenu()">跳转</button>
+</div>
+</div>
     </div>
   </div>
 
@@ -369,15 +375,38 @@ function togglePreview(){
 
 /* 导出 / 导入复习包 */
 function exportReview(){
+  if(!all.length){
+    alert("请先导入题库");
+    return;
+  }
+
+  // 获取当前北京时间
+  const now = new Date();
+  const beijingTime = new Date(now.getTime() + 8*60*60*1000); // UTC+8
+
+  const pad = n => n.toString().padStart(2,'0');
+  const timeStr = 
+    pad(beijingTime.getMonth()+1) +  // 月
+    pad(beijingTime.getDate()) +     // 日
+    pad(beijingTime.getHours()) +    // 时
+    pad(beijingTime.getMinutes());   // 分
+
+  // 题库名称去掉扩展名
+  const fileNameText = $("fileName").textContent.replace(/\.[^.]+$/,'');
+
+  // 构造导出文件名
+  const exportName = `RE${timeStr}_${fileNameText}.txt`;
+
+  // 导出内容
   const data={
     currentIndex:i,
     wrongIndexes:[...wrong],
-    time:new Date().toLocaleString()
+    time:beijingTime.toLocaleString('zh-CN',{hour12:false})
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"text/plain"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="review.json.txt";
+  a.download=exportName;
   a.click();
 }
 function importReview(){
@@ -401,6 +430,26 @@ reviewInput.onchange=e=>{
   };
   r.readAsText(f);
 };
+function jumpToMenu(){
+  if(!all.length){
+    alert("请先导入题库");
+    return;
+  }
+  const val = parseInt(document.getElementById("jumpInputMenu").value);
+  if(isNaN(val) || val < 1 || val > view.length){
+    alert("请输入有效题号 (1-"+view.length+")");
+    return;
+  }
+  i = val - 1; // 数组从0开始
+  render();
+  // 不关闭菜单，这里不调用 $("menuList").classList.remove("show");
+}
+// 阻止点击输入框收起菜单
+const inputMenu = document.getElementById("jumpInputMenu");
+if(inputMenu){
+  inputMenu.addEventListener("click", e => e.stopPropagation());
+  inputMenu.addEventListener("mousedown", e => e.stopPropagation());
+}
 
 /* 夜间 */
 darkMode.onchange=e=>{
